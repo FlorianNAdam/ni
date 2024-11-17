@@ -39,7 +39,7 @@
 
         craneLib = crane.mkLib pkgs;
 
-        scriptFilter = path: (builtins.match ".*.sh$" path) != null;
+        scriptFilter = path: (builtins.match ".*scripts.*" path) != null;
         scriptOrCargo = path: type: (scriptFilter path) || (craneLib.filterCargoSources path type);
         src = lib.cleanSourceWith {
           src = ./.;
@@ -98,7 +98,7 @@
               cp target/release/ni $out/bin/
 
               # Copy the shell script
-              cp $src/*.sh $out/bin/
+              cp $src/scripts/*.sh $out/bin/
               chmod +x $out/bin/*.sh
             '';
           }
