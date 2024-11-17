@@ -23,7 +23,7 @@ cd $NIXOS_PATH
 git add .
 
 # check if rebuild will work
-sudo nixos-rebuild dry-activate --flake $NIXOS_PATH#default
+sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#default
 
 # sync git repo
 cd $NIXOS_PATH
