@@ -1,6 +1,13 @@
 #! /usr/bin/env sh
 
-sudo ausearch -ts today -k config 2> /dev/null | awk '
+AUDIT_KEY=$1          
+
+if [ -z "$AUDIT_KEY" ]; then
+  echo "You must specify an audit key!"
+  exit 1
+fi
+
+sudo ausearch -ts today -k $AUDIT_KEY 2> /dev/null | awk '
       /type=PATH.*nametype=CREATE/ {
           # Extract the created file
           match($0, /name="([^"]+)"/, arr);

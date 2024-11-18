@@ -35,7 +35,7 @@ enum Commands {
     /// Cleans up the Nix environment
     Clean,
     /// Audits the Nix environment for issues
-    Audit,
+    Audit { key: String },
 }
 
 fn main() {
@@ -52,8 +52,8 @@ fn main() {
         Commands::Update { path } => {
             update(path).unwrap();
         }
-        Commands::Audit {} => {
-            audit().unwrap();
+        Commands::Audit { key } => {
+            audit(key).unwrap();
         }
         Commands::Clean {} => clean().unwrap(),
     }
@@ -96,9 +96,9 @@ fn clean() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn audit() -> anyhow::Result<()> {
+fn audit(key: &str) -> anyhow::Result<()> {
     let mut command = script_command("audit");
-    command.status()?;
+    command.arg(key).status()?;
 
     Ok(())
 }
