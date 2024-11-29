@@ -28,7 +28,12 @@ sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#default
 # sync git repo
 cd $NIXOS_PATH
 git commit -a --allow-empty -m "$LABEL"
-git push
+
+if git push --dry-run; then
+  git push
+else
+  echo "Can't push to remote. Skipping git push."
+fi
 
 # rebuild system
 sudo NIXOS_LABEL="$SANITIZED_LABEL" nixos-rebuild switch --impure --flake $NIXOS_PATH#default
