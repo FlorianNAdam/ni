@@ -7,7 +7,15 @@ if [ -z "$NIXOS_PATH" ]; then
   exit 1
 fi
 
-LABEL=$2
+MESSAGE=$2
+
+if [ -z "$MESSAGE" ]; then
+  echo "You must specify a message!"
+  exit 1
+fi
+
+
+LABEL=$3
 
 if [ -z "$LABEL" ]; then
   echo "You must specify a label!"
@@ -27,7 +35,7 @@ sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#default
 
 # sync git repo
 cd $NIXOS_PATH
-git commit -a --allow-empty -m "$LABEL"
+git commit -a --allow-empty -m "$MESSAGE"
 
 if git push --dry-run; then
   git push

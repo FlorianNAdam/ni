@@ -71,6 +71,7 @@ fn rebuild(nixos_path: &Path, label: Option<&str>, message: &str) -> anyhow::Res
     let mut command = script_command("rebuild");
     command
         .arg(nixos_path.as_ref())
+        .arg(message)
         .arg(sanitized_label)
         .status()?;
 
