@@ -7,7 +7,16 @@ if [ -z "$NIXOS_PATH" ]; then
   exit 1
 fi
 
-MESSAGE=$2
+
+NIXOS_HOST=$2
+
+if [ -z "$NIXOS_HOST" ]; then
+  echo "You must specify a host!"
+  exit 1
+fi
+
+
+MESSAGE=$3
 
 if [ -z "$MESSAGE" ]; then
   echo "You must specify a message!"
@@ -15,7 +24,7 @@ if [ -z "$MESSAGE" ]; then
 fi
 
 
-LABEL=$3
+LABEL=$4
 
 if [ -z "$LABEL" ]; then
   echo "You must specify a label!"
@@ -31,7 +40,7 @@ cd $NIXOS_PATH
 git add .
 
 # check if rebuild will work
-sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#default
+sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#$NIXOS_HOST
 
 # sync git repo
 cd $NIXOS_PATH
@@ -44,4 +53,4 @@ else
 fi
 
 # rebuild system
-sudo NIXOS_LABEL="$SANITIZED_LABEL" nixos-rebuild switch --impure --flake $NIXOS_PATH#default
+sudo NIXOS_LABEL="$SANITIZED_LABEL" nixos-rebuild switch --impure --flake $NIXOS_PATH#$NIXOS_HOST

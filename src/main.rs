@@ -22,6 +22,8 @@ enum Commands {
         /// Specify the flake path to rebuild
         #[arg(short, long, env = "NIXOS_CONFIG")]
         path: PathBuf,
+        #[arg(short, long, env = "NIXOS_HOST")]
+        host: String,
         #[arg(short, long)]
         label: Option<String>,
         message: String,
@@ -31,6 +33,8 @@ enum Commands {
         /// Specify the flake path to update
         #[arg(short, long, env = "NIXOS_CONFIG")]
         path: PathBuf,
+        #[arg(short, long, env = "NIXOS_HOST")]
+        host: String,
     },
     /// Cleans up the Nix environment
     Clean,
@@ -44,13 +48,14 @@ fn main() {
     match &cli.command {
         Commands::Rebuild {
             path,
+            host,
             label,
             message,
         } => {
-            rebuild(path, label.as_deref(), message).unwrap();
+            rebuild(path, host, label.as_deref(), message).unwrap();
         }
-        Commands::Update { path } => {
-            update(path).unwrap();
+        Commands::Update { path, host } => {
+            update(path, host).unwrap();
         }
         Commands::Audit { key } => {
             audit(key).unwrap();
@@ -59,18 +64,25 @@ fn main() {
     }
 }
 
-fn rebuild(nixos_path: &Path, label: Option<&str>, message: &str) -> anyhow::Result<()> {
+fn rebuild(
+    nixos_path: &Path,
+    host: &str,
+    label: Option<&str>,
+    message: &str,
+) -> anyhow::Result<()> {
     let nixos_path = nixos_path.resolve();
     let label = label.unwrap_or(message);
     let sanitized_label = sanitize_label(label);
 
     println!("path: {:?}", nixos_path);
+    println!("host: {:?}", host);
     println!("message: {:?}", message);
     println!("label: {:?}", sanitized_label);
 
     let mut command = script_command("rebuild");
     command
         .arg(nixos_path.as_ref())
+        .arg(host)
         .arg(message)
         .arg(sanitized_label)
         .status()?;
@@ -78,14 +90,14 @@ fn rebuild(nixos_path: &Path, label: Option<&str>, message: &str) -> anyhow::Res
     Ok(())
 }
 
-fn update(nixos_path: &Path) -> anyhow::Result<()> {
+fn update(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
     let nixos_path = nixos_path.resolve();
     println!("path: {:?}", nixos_path);
 
     let mut command = script_command("update");
     command.arg(nixos_path.as_ref()).status()?;
 
-    rebuild(nixos_path.as_ref(), None, "update")?;
+    rebuild(nixos_path.as_ref(), host, None, "update")?;
 
     Ok(())
 }
