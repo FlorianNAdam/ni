@@ -37,6 +37,11 @@ set -e
 SANITIZED_LABEL=$(echo "$LABEL" | sed 's/ /_/g' | sed 's/[^a-zA-Z0-9:_\.-]//g')
 
 cd $NIXOS_PATH
+
+# get remote changes
+git pull --rebase
+
+# add files to repo
 git add .
 
 # check if rebuild will work
