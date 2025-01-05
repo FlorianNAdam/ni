@@ -38,9 +38,6 @@ SANITIZED_LABEL=$(echo "$LABEL" | sed 's/ /_/g' | sed 's/[^a-zA-Z0-9:_\.-]//g')
 
 cd $NIXOS_PATH
 
-# get remote changes
-git pull --rebase
-
 # add files to repo
 git add .
 
@@ -52,6 +49,7 @@ cd $NIXOS_PATH
 git commit -a --allow-empty -m "$MESSAGE"
 
 if git push --dry-run; then
+  git pull --rebase
   git push
 else
   echo "Can't push to remote. Skipping git push."
