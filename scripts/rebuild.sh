@@ -48,11 +48,16 @@ sudo nixos-rebuild dry-activate --impure --flake $NIXOS_PATH#$NIXOS_HOST
 cd $NIXOS_PATH
 git commit -a --allow-empty -m "$MESSAGE"
 
-if git push --dry-run; then
+if git pull --rebase --dry-run; then
   git pull --rebase
-  git push
+  
+  if git push --dry-run; then
+    git push
+  else
+    echo "Can't push to remote. Skipping git push."
+  fi
 else
-  echo "Can't push to remote. Skipping git push."
+  echo "Can't pull from remote. Skipping git sync"
 fi
 
 # rebuild system
