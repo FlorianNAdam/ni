@@ -36,6 +36,22 @@ enum Commands {
         #[arg(short, long, env = "NIXOS_HOST")]
         host: String,
     },
+    /// Syncs the Nix environment with the Repo
+    Sync {
+        /// Specify the flake path to update
+        #[arg(short, long, env = "NIXOS_CONFIG")]
+        path: PathBuf,
+        #[arg(short, long, env = "NIXOS_HOST")]
+        host: String,
+    },
+    /// Syncs the Nix environment with the Repo
+    Test {
+        /// Specify the flake path to update
+        #[arg(short, long, env = "NIXOS_CONFIG")]
+        path: PathBuf,
+        #[arg(short, long, env = "NIXOS_HOST")]
+        host: String,
+    },
     /// Cleans up the Nix environment
     Clean,
     /// Audits the Nix environment for issues
@@ -56,6 +72,12 @@ fn main() {
         }
         Commands::Update { path, host } => {
             update(path, host).unwrap();
+        }
+        Commands::Sync { path, host } => {
+            sync(path, host).unwrap();
+        }
+        Commands::Test { path, host } => {
+            test(path, host).unwrap();
         }
         Commands::Audit { key } => {
             audit(key).unwrap();
@@ -92,12 +114,33 @@ fn rebuild(
 
 fn update(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
     let nixos_path = nixos_path.resolve();
-    println!("path: {:?}", nixos_path);
 
     let mut command = script_command("update");
     command.arg(nixos_path.as_ref()).status()?;
 
     rebuild(nixos_path.as_ref(), host, None, "update")?;
+
+    Ok(())
+}
+
+fn sync(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
+    let nixos_path = nixos_path.resolve();
+
+    rebuild(
+        nixos_path.as_ref(),
+        host,
+        Some("sync"),
+        &format!("sync {}", host),
+    )?;
+
+    Ok(())
+}
+
+fn test(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
+    let nixos_path = nixos_path.resolve();
+
+    let mut command = script_command("test");
+    command.arg(nixos_path.as_ref()).arg(host).status()?;
 
     Ok(())
 }
