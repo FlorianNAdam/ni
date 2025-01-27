@@ -131,12 +131,8 @@ fn update(nixos_path: &Path, host: &str, input: Option<&str>) -> anyhow::Result<
 fn sync(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
     let nixos_path = nixos_path.resolve();
 
-    rebuild(
-        nixos_path.as_ref(),
-        host,
-        Some("sync"),
-        &format!("sync {}", host),
-    )?;
+    let mut command = script_command("sync");
+    command.arg(nixos_path.as_ref()).arg(host).status()?;
 
     Ok(())
 }
