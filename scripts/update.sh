@@ -7,5 +7,7 @@ if [ -z "$NIXOS_PATH" ]; then
   exit 1
 fi
 
+INPUT_NAME=$2
+
 cd $NIXOS_PATH
-nix flake update
+nix flake update $INPUT_NAME

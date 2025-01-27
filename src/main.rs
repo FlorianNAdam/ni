@@ -35,6 +35,8 @@ enum Commands {
         path: PathBuf,
         #[arg(short, long, env = "NIXOS_HOST")]
         host: String,
+        #[arg(short, long)]
+        input: Option<String>,
     },
     /// Syncs the Nix environment with the Repo
     Sync {
@@ -70,8 +72,8 @@ fn main() {
         } => {
             rebuild(path, host, label.as_deref(), message).unwrap();
         }
-        Commands::Update { path, host } => {
-            update(path, host).unwrap();
+        Commands::Update { path, host, input } => {
+            update(path, host, input.as_deref()).unwrap();
         }
         Commands::Sync { path, host } => {
             sync(path, host).unwrap();
@@ -112,11 +114,15 @@ fn rebuild(
     Ok(())
 }
 
-fn update(nixos_path: &Path, host: &str) -> anyhow::Result<()> {
+fn update(nixos_path: &Path, host: &str, input: Option<&str>) -> anyhow::Result<()> {
     let nixos_path = nixos_path.resolve();
 
     let mut command = script_command("update");
-    command.arg(nixos_path.as_ref()).status()?;
+    command.arg(nixos_path.as_ref());
+    if let Some(input) = input {
+        command.arg(input);
+    }
+    command.status()?;
 
     rebuild(nixos_path.as_ref(), host, None, "update")?;
 
