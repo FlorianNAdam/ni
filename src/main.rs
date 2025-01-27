@@ -20,9 +20,9 @@ enum Commands {
     /// Rebuilds the Nix environment
     Rebuild {
         /// Specify the flake path to rebuild
-        #[arg(short, long, env = "NIXOS_CONFIG")]
+        #[arg(long, env = "NIXOS_CONFIG")]
         path: PathBuf,
-        #[arg(short, long, env = "NIXOS_HOST")]
+        #[arg(long, env = "NIXOS_HOST")]
         host: String,
         #[arg(short, long)]
         label: Option<String>,
@@ -31,27 +31,26 @@ enum Commands {
     /// Updates the Nix environment
     Update {
         /// Specify the flake path to update
-        #[arg(short, long, env = "NIXOS_CONFIG")]
+        #[arg(long, env = "NIXOS_CONFIG")]
         path: PathBuf,
-        #[arg(short, long, env = "NIXOS_HOST")]
+        #[arg(long, env = "NIXOS_HOST")]
         host: String,
-        #[arg(short, long)]
         input: Option<String>,
     },
     /// Syncs the Nix environment with the Repo
     Sync {
         /// Specify the flake path to update
-        #[arg(short, long, env = "NIXOS_CONFIG")]
+        #[arg(long, env = "NIXOS_CONFIG")]
         path: PathBuf,
-        #[arg(short, long, env = "NIXOS_HOST")]
+        #[arg(long, env = "NIXOS_HOST")]
         host: String,
     },
     /// Syncs the Nix environment with the Repo
     Test {
         /// Specify the flake path to update
-        #[arg(short, long, env = "NIXOS_CONFIG")]
+        #[arg(long, env = "NIXOS_CONFIG")]
         path: PathBuf,
-        #[arg(short, long, env = "NIXOS_HOST")]
+        #[arg(long, env = "NIXOS_HOST")]
         host: String,
     },
     /// Cleans up the Nix environment
