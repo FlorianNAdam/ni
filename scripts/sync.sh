@@ -35,7 +35,7 @@ after_hash=$(git rev-parse HEAD)
 if [ "$before_hash" != "$after_hash" ]; then
   echo "Changes were pulled and applied."
 
-  sudo NIXOS_LABEL="sync $NIXOS_HOST" nixos-rebuild switch --impure --flake $NIXOS_PATH#$NIXOS_HOST
+  sudo NIXOS_LABEL="sync" nixos-rebuild switch --impure --flake $NIXOS_PATH#$NIXOS_HOST
 else
   echo "No changes were pulled."
 fi

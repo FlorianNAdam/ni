@@ -45,9 +45,9 @@ enum Commands {
         #[arg(long, env = "NIXOS_HOST")]
         host: String,
     },
-    /// Syncs the Nix environment with the Repo
+    /// Test the Nix environment
     Test {
-        /// Specify the flake path to update
+        /// Specify the flake path to test
         #[arg(long, env = "NIXOS_CONFIG")]
         path: PathBuf,
         #[arg(long, env = "NIXOS_HOST")]
@@ -123,7 +123,13 @@ fn update(nixos_path: &Path, host: &str, input: Option<&str>) -> anyhow::Result<
     }
     command.status()?;
 
-    rebuild(nixos_path.as_ref(), host, None, "update")?;
+    let message = if let Some(input) = input {
+        format!("update {}", input)
+    } else {
+        "update".to_string()
+    };
+
+    rebuild(nixos_path.as_ref(), host, None, &message)?;
 
     Ok(())
 }
