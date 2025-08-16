@@ -178,7 +178,12 @@ fn sanitize_label(input: &str) -> String {
 }
 
 fn script_command(name: &str) -> Command {
-    let script_path = PathBuf::from("scripts");
+    let script_path = std::option_env!("MY_SCRIPT_PATH")
+        .map(PathBuf::from)
+        .unwrap_or(PathBuf::from(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("scripts"),
+        ));
+
     let script_path = script_path.join(name).with_extension("sh");
 
     Command::new(script_path)

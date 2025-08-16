@@ -29,11 +29,7 @@
 
         ni = naersk-lib.buildPackage {
           src = ./.;
-
-          preBuild = ''
-            mkdir -p $out/bin
-            ln -s ${./scripts} $out/scripts
-          '';
+          MY_SCRIPT_PATH = "${./scripts}";
         };
       in
       {
