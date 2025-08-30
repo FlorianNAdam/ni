@@ -56,8 +56,16 @@
               set -e
               cd $NIXOS_CONFIG
               git add .
-              sudo NIXOS_LABEL="$NIXOS_LABEL" nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST
-            '';
+            ''
+            + (
+              let
+                base-command = "sudo NIXOS_LABEL='$NIXOS_LABEL' nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST";
+              in
+              if config.ni.nom.enable then
+                "${base-command} |& ${pkgs.nix-nix-output-monitor}/bin/nom"
+              else
+                base-command
+            );
 
           rebuild = pkgs.writeShellScript "ni-rebuild" ''
             parser_definition() {
