@@ -40,31 +40,34 @@
 
           nixos-rebuild =
             operation: flags:
-            pkgs.writeShellScript "nixos-wrapped-${operation}" ''
-              NIXOS_CONIFG="${config.ni.nixosConfig}"         
-              if [ -z "$NIXOS_CONFIG" ]; then
-                echo "You must specify the path to the NixOS config!"
-                exit 1
-              fi
+            pkgs.writeShellScript "nixos-wrapped-${operation}" (
+              ''
+                NIXOS_CONFIG="${config.ni.nixos.config}"         
+                if [ -z "$NIXOS_CONFIG" ]; then
+                  echo "You must specify the path to the NixOS config!"
+                  exit 1
+                fi
 
-              NIXOS_HOST="${config.ni.nixosHost}"
-              if [ -z "$NIXOS_HOST" ]; then
-                echo "You must specify a host for the NixOS config!"
-                exit 1
-              fi
+                NIXOS_HOST="${config.ni.nixos.host}"
+                if [ -z "$NIXOS_HOST" ]; then
+                  echo "You must specify a host for the NixOS config!"
+                  exit 1
+                fi
 
-              set -e
-              cd $NIXOS_CONFIG
-              git add .
-            ''
-            + (
-              let
-                base-command = "sudo NIXOS_LABEL='$NIXOS_LABEL' nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST";
-              in
-              if config.ni.nom.enable then
-                "${base-command} |& ${pkgs.nix-nix-output-monitor}/bin/nom"
-              else
-                base-command
+                set -e
+                cd $NIXOS_CONFIG
+                git add .
+                sudo true
+              ''
+              + (
+                let
+                  base-command = ''sudo NIXOS_LABEL="$NIXOS_LABEL" nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST'';
+                in
+                if config.ni.nom.enable then
+                  "${base-command} |& ${pkgs.nix-output-monitor}/bin/nom"
+                else
+                  base-command
+              )
             );
 
           rebuild = pkgs.writeShellScript "ni-rebuild" ''
@@ -116,7 +119,7 @@
           '';
 
           update = pkgs.writeShellScript "ni-update" ''
-            NIXOS_CONIFG="${config.ni.nixosConfig}"         
+            NIXOS_CONFIG="${config.ni.nixos.config}"         
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
               exit 1
@@ -129,7 +132,7 @@
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
-            NIXOS_CONIFG="${config.ni.nixosConfig}"         
+            NIXOS_CONFIG="${config.ni.nixos.config}"         
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
               exit 1
@@ -261,12 +264,14 @@
           options.ni = {
             enable = mkEnableOption "Enable the ni program";
 
-            nixosConfig = mkOption {
-              type = types.str;
-            };
+            nixos = {
+              config = mkOption {
+                type = types.str;
+              };
 
-            nixosHost = mkOption {
-              type = types.str;
+              host = mkOption {
+                type = types.str;
+              };
             };
 
             nom = {
