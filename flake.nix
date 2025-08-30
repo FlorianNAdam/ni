@@ -243,7 +243,7 @@
             ) commands
           );
 
-          ni = pkgs.writeShellScriptBin "ni2" ''
+          ni = pkgs.writeShellScriptBin "ni" ''
             ${bundle}/bin/bundle \
                 --name ni ${commandsString} \
                 -- "$@"
