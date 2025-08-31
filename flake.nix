@@ -113,9 +113,9 @@
             fi
                
             cd $NIXOS_CONFIG
-            nix flake update $@
+            nix flake update $INPUT
 
-            ${rebuild} "update $@"
+            ${rebuild} "update $INPUT"
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
@@ -196,7 +196,10 @@
                   executable = update;
                   args = [
                     {
-                      input = { };
+                      input = {
+                        takes_value = true;
+                        multiple_values = true;
+                      };
                     }
                   ];
                 };
