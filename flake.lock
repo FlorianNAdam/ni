@@ -11,11 +11,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1756665449,
-        "narHash": "sha256-bEL2JHxVnwMhxcWtAxESwANOWCyue4+OmP+xUHRkS0M=",
+        "lastModified": 1756666757,
+        "narHash": "sha256-9nOeHuu5ZHVJu8KitQLtTI24keZkhl6XM4x4kZ6xncY=",
         "owner": "FlorianNAdam",
         "repo": "clap-bash",
-        "rev": "3d2ca5e962d05185e56895c0fb8b4e781ee5395e",
+        "rev": "9818b66e6a8808839704321806ba69ad20564d48",
         "type": "github"
       },
       "original": {
