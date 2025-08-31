@@ -102,7 +102,7 @@
               echo "Can't pull from remote. Skipping git sync"
             fi
 
-            ${switch} --label "$LABEL" "$MESSAGE"
+            ${switch}
           '';
 
           update = pkgs.writeShellScript "ni-update" ''
@@ -113,9 +113,12 @@
             fi
                
             cd $NIXOS_CONFIG
-            nix flake update $INPUT
+            IFS=',' read -ra parts <<< "$INPUT"
+            for part in "''${parts[@]}"; do
+                nix flake update "$part"
+            done          
 
-            ${rebuild} "update $INPUT"
+            MESSAGE="update $INPUT" ${rebuild}
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
@@ -134,7 +137,7 @@
             if [ "$before_hash" != "$after_hash" ]; then
               echo "Changes were pulled and applied."
 
-              ${switch} "sync"
+              MESSAGE="sync" ${switch}
             else
               echo "No changes were pulled."
             fi
@@ -197,8 +200,7 @@
                   args = [
                     {
                       input = {
-                        takes_value = true;
-                        multiple_values = true;
+                        arg_action = "append";
                       };
                     }
                   ];
