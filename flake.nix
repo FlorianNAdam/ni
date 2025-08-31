@@ -6,8 +6,8 @@
 
     flake-utils.url = "github:numtide/flake-utils";
 
-    bundle = {
-      url = "github:FlorianNAdam/bundle";
+    clap-bash = {
+      url = "github:FlorianNAdam/clap-bash";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
@@ -17,8 +17,9 @@
     {
       self,
       nixpkgs,
+      clap-bash,
       ...
-    }@inputs:
+    }:
     {
       nixosModules.ni =
         {
@@ -36,30 +37,26 @@
             ;
         in
         let
-          bundle = inputs.bundle.packages.${pkgs.system}.bundle;
-
           nixos-rebuild =
             operation: flags:
-            pkgs.writeShellScript "nixos-wrapped-${operation}" (
-              ''
-                NIXOS_CONFIG="${config.ni.nixos.config}"         
-                if [ -z "$NIXOS_CONFIG" ]; then
-                  echo "You must specify the path to the NixOS config!"
-                  exit 1
-                fi
+            pkgs.writeShellScript "nixos-wrapped-${operation}" ''
+              NIXOS_CONFIG="${config.ni.nixos.config}"
+              if [ -z "$NIXOS_CONFIG" ]; then
+                echo "You must specify the path to the NixOS config!"
+                exit 1
+              fi
 
-                NIXOS_HOST="${config.ni.nixos.host}"
-                if [ -z "$NIXOS_HOST" ]; then
-                  echo "You must specify a host for the NixOS config!"
-                  exit 1
-                fi
+              NIXOS_HOST="${config.ni.nixos.host}"
+              if [ -z "$NIXOS_HOST" ]; then
+                echo "You must specify a host for the NixOS config!"
+                exit 1
+              fi
 
-                set -e
-                cd $NIXOS_CONFIG
-                git add .
-                sudo true
-              ''
-              + (
+              set -e
+              cd $NIXOS_CONFIG
+              git add .
+              sudo true
+              ${
                 let
                   base-command = ''sudo NIXOS_LABEL="$NIXOS_LABEL" nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST'';
                 in
@@ -67,25 +64,15 @@
                   "${base-command} |& ${pkgs.nix-output-monitor}/bin/nom"
                 else
                   base-command
-              )
-            );
+              }
+            '';
 
           rebuild = pkgs.writeShellScript "ni-rebuild" ''
-            parser_definition() {
-              setup REST help:usage -- "Usage: ni rebuild [options]... <message>" ' '
-              msg -- 'Options:'
-              param LABEL -l --label -- "Boot label for the generation (optional)"
-              disp :usage --help -- "Show this help message"
-            }
-
-            eval "$(${pkgs.getoptions}/bin/getoptions parser_definition) exit 1"
-
-            if [ $# -eq 0 ]; then
-              echo "Error: message argument is required" >&2
-              usage
+            NIXOS_CONFIG="${config.ni.nixos.config}"
+            if [ -z "$NIXOS_CONFIG" ]; then
+              echo "You must specify the path to the NixOS config!"
               exit 1
             fi
-            MESSAGE="$*"
 
             if [ -z "$LABEL" ]; then
               LABEL=$MESSAGE
@@ -119,7 +106,7 @@
           '';
 
           update = pkgs.writeShellScript "ni-update" ''
-            NIXOS_CONFIG="${config.ni.nixos.config}"         
+            NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
               exit 1
@@ -132,7 +119,7 @@
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
-            NIXOS_CONFIG="${config.ni.nixos.config}"         
+            NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
               exit 1
@@ -158,29 +145,12 @@
           '';
 
           switch = pkgs.writeShellScript "ni-switch" ''
-            parser_definition() {
-              setup REST help:usage -- "Usage: ni switch [options]... <message>" ' '
-              msg -- 'Options:'
-              param LABEL -l --label -- "Boot label for the generation (optional)"
-              disp :usage --help -- "Show this help message"
-            }
-
-            # Label sanitization function
             sanitize_label() {
               local input="$1"
               input="''${input// /_}"
               input="''${input//[^a-zA-Z0-9:_._-]/}"
               echo "$input"
             }
-
-            eval "$(${pkgs.getoptions}/bin/getoptions parser_definition) exit 1"
-
-            if [ $# -eq 0 ]; then
-              echo "Error: message argument is required" >&2
-              usage
-              exit 1
-            fi
-            MESSAGE="$*"
 
             if [ -z "$LABEL" ]; then
               LABEL=$MESSAGE
@@ -196,69 +166,80 @@
             sudo /run/current-system/bin/switch-to-configuration boot
           '';
 
-          commands = [
-            {
-              name = "rebuild";
-              executable = rebuild;
-              description = "Rebuilds the NixOS environment";
-            }
-            {
-              name = "update";
-              executable = update;
-              description = "Updates the system flake inputs and rebuilds";
-            }
-            {
-              name = "sync";
-              executable = sync;
-              description = "Syncs system configuration with remote repository";
-            }
-            {
-              name = "test";
-              executable = test;
-              description = "Tests the configuration without applying changes";
-            }
-            {
-              name = "switch";
-              executable = switch;
-              description = "Switches to the new system generation";
-            }
-            {
-              name = "clean";
-              executable = clean;
-              description = "Cleans up old system generations and temporary files";
-            }
-          ];
-
-          commandsString = lib.concatStringsSep " " (
-            lib.map (
+          ni = clap-bash.util.${pkgs.system}.writeClapScriptBin "ni" {
+            name = "ni";
+            about = "A small nix convenience wrapper";
+            subcommand_required = true;
+            subcommands = [
               {
-                name,
-                executable,
-                description ? "",
-              }:
-              let
-                nameString = if name != "" then "${name}" else throw "Command name cannot be empty";
-                executableString =
-                  if executable != "" then ":${executable}" else throw "Command executable cannot be empty";
-                descriptionString = lib.optionalString (description != "") ":${description}";
-              in
-              "\\\n    --command ${
-                lib.escapeShellArg (
-                  lib.concatStrings [
-                    nameString
-                    executableString
-                    descriptionString
-                  ]
-                )
-              }"
-            ) commands
-          );
-
-          ni = pkgs.writeShellScriptBin "ni" ''
-            ${bundle}/bin/bundle \
-                --name ni ${commandsString} \
-                -- "$@"
-          '';
+                rebuild = {
+                  about = "Rebuilds the NixOS environment";
+                  executable = rebuild;
+                  args = [
+                    {
+                      label = {
+                        short = "l";
+                        long = "label";
+                      };
+                    }
+                    {
+                      message = {
+                        required = true;
+                      };
+                    }
+                  ];
+                };
+              }
+              {
+                update = {
+                  about = "Updates the system flake inputs and rebuilds";
+                  executable = update;
+                  args = [
+                    {
+                      input = { };
+                    }
+                  ];
+                };
+              }
+              {
+                sync = {
+                  about = "Syncs system configuration with remote repository";
+                  executable = sync;
+                };
+              }
+              {
+                test = {
+                  about = "Tests the configuration without applying changes";
+                  executable = test;
+                };
+              }
+              {
+                switch = {
+                  about = "Switches to the new system generation";
+                  executable = switch;
+                  args = [
+                    {
+                      label = {
+                        short = "l";
+                        long = "label";
+                      };
+                    }
+                    {
+                      message = {
+                        required = true;
+                      };
+                    }
+                  ];
+                };
+              }
+              {
+                clean = {
+                  about = "Cleans up old system generations and temporary files";
+                  executable = clean;
+                };
+              }
+            ];
+          };
         in
         {
           options.ni = {
