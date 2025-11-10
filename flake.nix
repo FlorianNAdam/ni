@@ -113,10 +113,14 @@
             fi
                
             cd $NIXOS_CONFIG
-            IFS=',' read -ra parts <<< "$INPUT"
-            for part in "''${parts[@]}"; do
+            if [ -z "$INPUT" ]; then
+              nix flake update
+            else
+              IFS=',' read -ra parts <<< "$INPUT"
+              for part in "''${parts[@]}"; do
                 nix flake update "$part"
-            done          
+              done
+            fi          
 
             MESSAGE="update $INPUT" ${rebuild}
           '';
