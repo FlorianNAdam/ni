@@ -37,6 +37,8 @@
             ;
         in
         let
+          system = pkgs.stdenv.hostPlatform.system;
+
           nixos-rebuild =
             operation: flags:
             pkgs.writeShellScript "nixos-wrapped-${operation}" ''
@@ -173,7 +175,7 @@
             sudo /run/current-system/bin/switch-to-configuration boot
           '';
 
-          ni = clap-bash.util.${pkgs.system}.writeClapScriptBin "ni" {
+          ni = clap-bash.util.${system}.writeClapScriptBin "ni" {
             name = "ni";
             about = "A small nix convenience wrapper";
             subcommand_required = true;
