@@ -45,7 +45,7 @@
               script = pkgs.writeShellScript "user-script" user-script;
             in
             ''
-              su ${user} -s ${pkgs.bash}/bin/bash -c "${script}"
+              su -p ${user} -s ${pkgs.bash}/bin/bash -c "${script}"
             '';
 
           run-as-user = run-as "$SUDO_USER";
@@ -65,6 +65,7 @@
           '';
 
           ensure_root = ''
+            set -e
             source ${util}
             ensure_root
           '';
@@ -189,7 +190,6 @@
             read before_hash after_hash < <(
               ${run-as-user (
                 pkgs.writeShellScript "git-check-hash" ''
-                  set -e
                   cd "$NIXOS_CONFIG"
                   git add .
                   before=$(git rev-parse HEAD || true)
