@@ -40,12 +40,13 @@
           system = pkgs.stdenv.hostPlatform.system;
 
           run-as =
-            user: user-script:
+            user: env: user-script:
             let
               script = pkgs.writeShellScript "user-script" user-script;
+              env-export = lib.concatStrings (builtins.map (var: ''export ${var}="''$${var}";'') env);
             in
             ''
-              su -p ${user} -s ${pkgs.bash}/bin/bash -c "${script}"
+              su ${user} -s ${pkgs.bash}/bin/bash -c "${env-export}${script}"
             '';
 
           run-as-user = run-as "$SUDO_USER";
@@ -87,10 +88,9 @@
                 exit 1
               fi
 
-              set -e
               cd $NIXOS_CONFIG
 
-              ${run-as-user (
+              ${run-as-user [ ] (
                 pkgs.writeShellScript "git-add" ''
                   git add .
                 ''
@@ -123,7 +123,7 @@
             cd $NIXOS_CONFIG
 
             # add files to repo
-            ${run-as-user (
+            ${run-as-user [ ] (
               pkgs.writeShellScript "git-add" ''
                 git add .
               ''
@@ -133,10 +133,8 @@
             ${nixos-rebuild "dry-activate" [ ]}
 
             # sync git repo
-            ${run-as-user (
+            ${run-as-user [ "MESSAGE" ] (
               pkgs.writeShellScript "git-sync" ''
-                cd $NIXOS_CONFIG
-
                 git commit -a --allow-empty -m "$MESSAGE"
 
                 if git pull --rebase --dry-run; then
@@ -187,10 +185,10 @@
               exit 1
             fi
 
+            cd $NIXOS_CONFIG
             read before_hash after_hash < <(
-              ${run-as-user (
+              ${run-as-user [ ] (
                 pkgs.writeShellScript "git-check-hash" ''
-                  cd "$NIXOS_CONFIG"
                   git add .
                   before=$(git rev-parse HEAD || true)
                   git pull --rebase || true
@@ -238,7 +236,7 @@
 
             nix-collect-garbage -d
 
-            ${run-as-user (
+            ${run-as-user [ ] (
               pkgs.writeShellScript "git-check-hash" ''
                 nix-collect-garbage -d
               ''
