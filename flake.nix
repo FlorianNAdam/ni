@@ -1,5 +1,5 @@
 {
-  description = "Mirage FUSE filesystem with configurable file content";
+  description = "A small nix convenience wrapper";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -51,7 +51,7 @@
 
           run-as-user = run-as "$SUDO_USER";
 
-          util = pkgs.writeShellScript "mirage-util" ''
+          util = pkgs.writeShellScript "util" ''
             ensure_root() {
               if [ "$(id -u)" -ne 0 ]; then
                 echo "error: this script must be run as root (e.g. via sudo)" >&2
