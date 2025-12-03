@@ -39,9 +39,41 @@
         let
           system = pkgs.stdenv.hostPlatform.system;
 
+          run-as =
+            user: user-script:
+            let
+              script = pkgs.writeShellScript "user-script" user-script;
+            in
+            ''
+              su ${user} -s ${pkgs.bash}/bin/bash -c "${script}"
+            '';
+
+          run-as-user = run-as "$SUDO_USER";
+
+          util = pkgs.writeShellScript "mirage-util" ''
+            ensure_root() {
+              if [ "$(id -u)" -ne 0 ]; then
+                echo "error: this script must be run as root (e.g. via sudo)" >&2
+                exit 1
+              fi
+
+              if [ -z "$SUDO_USER" ]; then
+                echo "error: this script expects to be invoked via sudo by a non-root user" >&2
+                exit 1
+              fi
+            }
+          '';
+
+          ensure_root = ''
+            source ${util}
+            ensure_root
+          '';
+
           nixos-rebuild =
             operation: flags:
             pkgs.writeShellScript "nixos-wrapped-${operation}" ''
+              ${ensure_root}
+
               NIXOS_CONFIG="${config.ni.nixos.config}"
               if [ -z "$NIXOS_CONFIG" ]; then
                 echo "You must specify the path to the NixOS config!"
@@ -56,11 +88,16 @@
 
               set -e
               cd $NIXOS_CONFIG
-              git add .
-              sudo true
+
+              ${run-as-user (
+                pkgs.writeShellScript "git-add" ''
+                  git add .
+                ''
+              )}
+
               ${
                 let
-                  base-command = ''sudo NIXOS_LABEL="$NIXOS_LABEL" nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST'';
+                  base-command = ''NIXOS_LABEL="$NIXOS_LABEL" nixos-rebuild ${operation} ${lib.concatStringsSep " " flags} --flake $NIXOS_CONFIG#$NIXOS_HOST'';
                 in
                 if config.ni.nom.enable then
                   "${base-command} |& ${pkgs.nix-output-monitor}/bin/nom"
@@ -70,6 +107,8 @@
             '';
 
           rebuild = pkgs.writeShellScript "ni-rebuild" ''
+            ${ensure_root}
+
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
@@ -83,31 +122,42 @@
             cd $NIXOS_CONFIG
 
             # add files to repo
-            git add .
+            ${run-as-user (
+              pkgs.writeShellScript "git-add" ''
+                git add .
+              ''
+            )}
 
             # check if rebuild will work
             ${nixos-rebuild "dry-activate" [ ]}
 
             # sync git repo
-            cd $NIXOS_CONFIG
-            git commit -a --allow-empty -m "$MESSAGE"
+            ${run-as-user (
+              pkgs.writeShellScript "git-sync" ''
+                cd $NIXOS_CONFIG
 
-            if git pull --rebase --dry-run; then
-              git pull --rebase
+                git commit -a --allow-empty -m "$MESSAGE"
 
-              if git push --dry-run; then
-                git push
-              else
-                echo "Can't push to remote. Skipping git push."
-              fi
-            else
-              echo "Can't pull from remote. Skipping git sync"
-            fi
+                if git pull --rebase --dry-run; then
+                  git pull --rebase
+
+                  if git push --dry-run; then
+                    git push
+                  else
+                    echo "Can't push to remote. Skipping git push."
+                  fi
+                else
+                  echo "Can't pull from remote. Skipping git sync"
+                fi
+              ''
+            )}
 
             ${switch}
           '';
 
           update = pkgs.writeShellScript "ni-update" ''
+            ${ensure_root}
+
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
@@ -128,17 +178,27 @@
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
+            ${ensure_root}
+
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
               echo "You must specify the path to the NixOS config!"
               exit 1
             fi
-               
-            cd $NIXOS_CONFIG
-            git add .
-            before_hash=$(git rev-parse HEAD)
-            git pull --rebase
-            after_hash=$(git rev-parse HEAD)
+
+            read before_hash after_hash < <(
+              ${run-as-user (
+                pkgs.writeShellScript "git-check-hash" ''
+                  set -e
+                  cd "$NIXOS_CONFIG"
+                  git add .
+                  before=$(git rev-parse HEAD || true)
+                  git pull --rebase || true
+                  after=$(git rev-parse HEAD || true)
+                  printf "%s %s" "$before" "$after"
+                ''
+              )}
+            )
 
             if [ "$before_hash" != "$after_hash" ]; then
               echo "Changes were pulled and applied."
@@ -150,10 +210,14 @@
           '';
 
           test = pkgs.writeShellScript "ni-test" ''
+            ${ensure_root}
+
             ${nixos-rebuild "test" [ ]}
           '';
 
           switch = pkgs.writeShellScript "ni-switch" ''
+            ${ensure_root}
+
             sanitize_label() {
               local input="$1"
               input="''${input// /_}"
@@ -170,9 +234,17 @@
           '';
 
           clean = pkgs.writeShellScript "ni-clean" ''
-            sudo nix-collect-garbage -d
+            ${ensure_root}
+
             nix-collect-garbage -d
-            sudo /run/current-system/bin/switch-to-configuration boot
+
+            ${run-as-user (
+              pkgs.writeShellScript "git-check-hash" ''
+                nix-collect-garbage -d
+              ''
+            )}
+
+            /run/current-system/bin/switch-to-configuration boot
           '';
 
           ni = clap-bash.util.${system}.writeClapScriptBin "ni" {
