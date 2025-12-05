@@ -43,7 +43,7 @@
             user: env: user-script:
             let
               script = pkgs.writeShellScript "user-script" user-script;
-              env-export = lib.concatStrings (builtins.map (var: ''export ${var}=''$${var};'') env);
+              env-export = lib.concatStrings (builtins.map (var: ''export ${var}=''\"$${var}\";'') env);
             in
             ''
               su ${user} -s ${pkgs.bash}/bin/bash -c "${env-export}${script}"
