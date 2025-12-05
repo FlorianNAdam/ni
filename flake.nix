@@ -55,7 +55,7 @@
             set -e
 
             if [ "$(id -u)" -ne 0 ]; then
-              exec sudo -E "$0" "$@"
+              exec sudo -E -H "$0" "$@"
             fi
 
             if [ -z "$SUDO_USER" ]; then
