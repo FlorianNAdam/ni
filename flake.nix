@@ -51,30 +51,46 @@
 
           run-as-user = run-as "$SUDO_USER";
 
-          util = pkgs.writeShellScript "util" ''
-            ensure_root() {
-              if [ "$(id -u)" -ne 0 ]; then
-                echo "error: this script must be run as root (e.g. via sudo)" >&2
-                exit 1
-              fi
-
-              if [ -z "$SUDO_USER" ]; then
-                echo "error: this script expects to be invoked via sudo by a non-root user" >&2
-                exit 1
-              fi
-            }
-          '';
-
-          ensure_root = ''
+          ensure-root = ''
             set -e
-            source ${util}
-            ensure_root
+
+            if [ "$(id -u)" -ne 0 ]; then
+              exec sudo "$0" "$@"
+            fi
+
+            if [ -z "$SUDO_USER" ]; then
+              echo "error: this script expects to be invoked via sudo by a non-root user" >&2
+              exit 1
+            fi
           '';
+
+          parse-override-input =
+            let
+              script = pkgs.writeShellScript "script" ''
+                parse_override_input() {
+                    local input="$OVERRIDE_INPUT"
+                    local override_args=""
+
+                    IFS=',' read -ra items <<< "$input"
+                    for item in "''${items[@]}"; do
+                        IFS=';' read -ra subs <<< "$item"
+                        if [ "''${#subs[@]}" -eq 2 ]; then
+                            override_args+="--override-input ''${subs[0]} ''${subs[1]} "
+                        fi
+                    done
+
+                    override_args="''${override_args%" "}"
+                    echo "$override_args"
+                }
+                parse_override_input
+              '';
+            in
+            "${script}";
 
           nixos-rebuild =
             operation: flags:
             pkgs.writeShellScript "nixos-wrapped-${operation}" ''
-              ${ensure_root}
+              ${ensure-root}
 
               NIXOS_CONFIG="${config.ni.nixos.config}"
               if [ -z "$NIXOS_CONFIG" ]; then
@@ -108,7 +124,7 @@
             '';
 
           rebuild = pkgs.writeShellScript "ni-rebuild" ''
-            ${ensure_root}
+            ${ensure-root}
 
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
@@ -155,7 +171,7 @@
           '';
 
           update = pkgs.writeShellScript "ni-update" ''
-            ${ensure_root}
+            ${ensure-root}
 
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
@@ -177,7 +193,7 @@
           '';
 
           sync = pkgs.writeShellScript "ni-sync" ''
-            ${ensure_root}
+            ${ensure-root}
 
             NIXOS_CONFIG="${config.ni.nixos.config}"
             if [ -z "$NIXOS_CONFIG" ]; then
@@ -208,13 +224,13 @@
           '';
 
           test = pkgs.writeShellScript "ni-test" ''
-            ${ensure_root}
+            ${ensure-root}
 
             ${nixos-rebuild "test" [ ]}
           '';
 
           switch = pkgs.writeShellScript "ni-switch" ''
-            ${ensure_root}
+            ${ensure-root}
 
             sanitize_label() {
               local input="$1"
@@ -232,7 +248,7 @@
           '';
 
           clean = pkgs.writeShellScript "ni-clean" ''
-            ${ensure_root}
+            ${ensure-root}
 
             nix-collect-garbage -d
 
@@ -292,6 +308,16 @@
                 test = {
                   about = "Tests the configuration without applying changes";
                   executable = test;
+                  args = [
+                    {
+                      override-input = {
+                        long = "override-input";
+                        env_var = "OVERRIDE_INPUT";
+                        arg_action = "append";
+                        number_of_values = 2;
+                      };
+                    }
+                  ];
                 };
               }
               {
