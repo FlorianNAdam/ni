@@ -212,8 +212,8 @@
                   printf "%s %s" "$before" "$after"
                 ''
               )
-            }
-            read old_hash new_hash <<< "$hashes")
+            })
+            read old_hash new_hash <<< "$hashes"
 
             echo "old_hash: $old_hash"
             echo "new_hash: $new_hash"
