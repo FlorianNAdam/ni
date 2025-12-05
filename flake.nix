@@ -202,19 +202,23 @@
             fi
 
             cd $NIXOS_CONFIG
-            read before_hash after_hash < <(
-              ${run-as-user [ ] (
+            hashes=$(${
+              run-as-user [ ] (
                 pkgs.writeShellScript "git-check-hash" ''
-                  git add .
+                  git add . >/dev/null
                   before=$(git rev-parse HEAD || true)
-                  git pull --rebase || true
+                  git pull --rebase >/dev/null || true
                   after=$(git rev-parse HEAD || true)
                   printf "%s %s" "$before" "$after"
                 ''
-              )}
-            )
+              )
+            }
+            read old_hash new_hash <<< "$hashes")
 
-            if [ "$before_hash" != "$after_hash" ]; then
+            echo "old_hash: $old_hash"
+            echo "new_hash: $new_hash"
+
+            if [ "$old_hash" != "$new_hash" ]; then
               echo "Changes were pulled and applied."
 
               MESSAGE="sync" ${switch}
