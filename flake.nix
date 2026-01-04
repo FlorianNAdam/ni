@@ -91,6 +91,7 @@
             operation: flags:
             pkgs.writeShellScript "nixos-wrapped-${operation}" ''
               ${ensure-root}
+              set -eo pipefail
 
               NIXOS_CONFIG="${config.ni.nixos.config}"
               if [ -z "$NIXOS_CONFIG" ]; then
